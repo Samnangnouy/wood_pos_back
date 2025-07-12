@@ -77,3 +77,24 @@ export const deleteCategory = async (req, res)=>{
         res.status(500).json({error : " Internal Server Error. "})
     }
 }
+
+// Get category by ID
+export const getCategoryById = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Find the category by ID
+    const category = await Category.findById(id);
+
+    // If not found
+    if (!category) {
+      return res.status(404).json({ message: "Category not found." });
+    }
+
+    // Return the found category
+    res.status(200).json(category);
+  } catch (error) {
+    console.error("Error fetching category by ID:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
