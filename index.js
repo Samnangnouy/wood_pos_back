@@ -5,9 +5,11 @@ import dotenv from "dotenv";
 
 //Line to to added 
 import route from "./routes/categoryRoute.js";
+import productRoute from "./routes/productRoute.js";
 
 const app = express();
 app.use(bodyParser.json());
+app.use('/uploads', express.static('public/upload'));
 
 dotenv.config();
 
@@ -26,3 +28,4 @@ mongoose
 
 // Line to be added 
 app.use("/api/category", route);
+app.use("/api/product", productRoute);

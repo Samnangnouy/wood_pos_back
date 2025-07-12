@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 // Define the schema for the user entity
