@@ -2,7 +2,7 @@ import multer from "multer";
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "./public/upload"); // make sure this folder exists
+    cb(null, "./public/upload");
   },
   filename: (req, file, cb) => {
     const uniqueName = Date.now() + "-" + file.originalname;
@@ -10,6 +10,14 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const fileFilter = (req, file, cb) => {
+  if (!file.originalname) {
+    cb(null, false); // Don't save empty files
+  } else {
+    cb(null, true);
+  }
+};
+
+const upload = multer({ storage, fileFilter });
 
 export default upload;
