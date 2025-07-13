@@ -11,7 +11,7 @@ const productSchema = new mongoose.Schema({
   },
   category_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "categories", // This must match the name used in your category model
+    ref: "categories", 
     required: true,
   },
   price: {

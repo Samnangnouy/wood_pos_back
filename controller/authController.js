@@ -1,0 +1,36 @@
+// controller/authController.js
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../model/userModel.js";
+import dotenv from "dotenv";
+dotenv.config();
+
+export const login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+    );
+
+    const { password: _, ...userWithoutPassword } = user.toObject();
+
+    res.status(200).json({ user: userWithoutPassword, token });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Optional logout placeholder
+export const logout = (req, res) => {
+  res.status(200).json({ message: "Logout successful (token must be removed client-side)" });
+};
