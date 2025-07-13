@@ -34,3 +34,20 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
   res.status(200).json({ message: "Logout successful (token must be removed client-side)" });
 };
+
+export const me = async (req, res) => {
+  try {
+    const userId = req.user.userId; // from authenticate middleware
+    const user = await User.findById(userId).select("-password"); // exclude password
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
