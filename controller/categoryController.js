@@ -23,20 +23,72 @@ export const create = async (req, res) => {
 };
 
 // For getting all category from the database
-export const fetch = async (req, res)=>{
-    try {
-        // Find all category in the database
-        const categories = await Category.find();
-        // If no category are found, send a 404 error response
-        if(categories.length === 0 ){
-            return res.status(404).json({message : "Categories not Found."})
-        }
-        // Send a success response with the fetched category data
-        res.status(200).json(categories);
-    } catch (error) {
-        // Handle any errors and send an internal server error response
-        res.status(500).json({error : " Internal Server Error. "})
+// export const fetch = async (req, res)=>{
+//     try {
+//         // Find all category in the database
+//         const categories = await Category.find();
+//         // If no category are found, send a 404 error response
+//         if(categories.length === 0 ){
+//             return res.status(404).json({message : "Categories not Found."})
+//         }
+//         // Send a success response with the fetched category data
+//         res.status(200).json(categories);
+//     } catch (error) {
+//         // Handle any errors and send an internal server error response
+//         res.status(500).json({error : " Internal Server Error. "})
+//     }
+// }
+
+export const fetch = async (req, res) => {
+  try {
+    const perPage = parseInt(req.query.per_page) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const search = req.query.search || '';
+    const sortField = req.query.sort_field || 'updated_date';
+    const sortDirection = req.query.sort_direction === 'asc' ? 1 : -1;
+
+    const filter = {
+      name: { $regex: search, $options: 'i' },
+    };
+
+    const total = await Category.countDocuments(filter);
+    const categories = await Category.find(filter)
+      .sort({ [sortField]: sortDirection })
+      .skip(( page - 1) * perPage)
+      .limit(perPage);
+
+    const response = categories.map(category => {
+      const categoryObj = category.toObject();
+      return {
+        ...categoryObj,
+      };
+    });
+
+    const lastPage = Math.ceil(total / perPage);
+    const from = total === 0 ? 0 : (page - 1) * perPage + 1;
+    const to = Math.min(page * perPage, total);
+
+    const links = [];
+    for (let i =1; i <= lastPage; i++) {
+      links.push({
+        url: `?page=${i}&per_page=${perPage}&search=${search}&sort_field=${sortField}&sort_direction=${req.query.sort_direction || 'desc'}`,
+        label: String(i),
+        active: i === page,
+      });
     }
+
+    res.status(200).json({
+      data: response,
+      links,
+      total,
+      limit: perPage,
+      from,
+      to
+    });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res.status(500).json({ error: "Internal Server Error." });
+  }
 }
 
 // For updating data

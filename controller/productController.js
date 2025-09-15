@@ -54,22 +54,54 @@ export const create = async (req, res) => {
 
 export const fetch = async (req, res) => {
   try {
-    const products = await Product.find().populate("category_id");
+    const perPage = parseInt(req.query.per_page) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const search = req.query.search || '';
+    const sortField = req.query.sort_field || 'updated_date';
+    const sortDirection = req.query.sort_direction === 'asc' ? 1 : -1;
 
-    if (products.length === 0) {
-      return res.status(404).json({ message: "Product not found." });
-    }
+    const filter = {
+      name: { $regex: search, $options: 'i' },
+    };
+
+    const total = await Product.countDocuments(filter);
+    const products = await Product.find(filter)
+      .populate("category_id")
+      .sort({ [sortField]: sortDirection })
+      .skip((page - 1) * perPage)
+      .limit(perPage);
 
     const response = products.map(product => {
       const productObj = product.toObject();
       return {
         ...productObj,
-        category: productObj.category_id, 
-        category_id: productObj.category_id._id, 
+        category: productObj.category_id,
+        category_id: productObj.category_id._id,
       };
     });
 
-    res.status(200).json(response);
+    const lastPage = Math.ceil(total / perPage);
+    const from = total === 0 ? 0 : (page - 1) * perPage + 1;
+    const to = Math.min(page * perPage, total);
+
+    // Generate pagination links (you can modify for full URLs if needed)
+    const links = [];
+    for (let i = 1; i <= lastPage; i++) {
+      links.push({
+        url: `?page=${i}&per_page=${perPage}&search=${search}&sort_field=${sortField}&sort_direction=${req.query.sort_direction || 'desc'}`,
+        label: String(i),
+        active: i === page,
+      });
+    }
+
+    res.status(200).json({
+      data: response,
+      links,
+      total,
+      limit: perPage,
+      from,
+      to
+    });
   } catch (error) {
     console.error("Error fetching products:", error);
     res.status(500).json({ error: "Internal Server Error." });

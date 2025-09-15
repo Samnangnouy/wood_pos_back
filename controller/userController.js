@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs, { link } from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
 import User from "../model/userModel.js";
@@ -45,15 +45,68 @@ export const create = async (req, res) => {
     }
 };
 
+// export const fetch = async (req, res) => {
+//     try {
+//         const users = await User.find();
+//         if (users.length === 0) {
+//             return res.status(404).json({ message: "User not found." })
+//         }
+//         res.status(200).json(users);
+//     } catch (error) {
+//         res.status(500).json({ error: "Internal Server Error." })
+//     }
+// }
+
 export const fetch = async (req, res) => {
     try {
-        const users = await User.find();
-        if (users.length === 0) {
-            return res.status(404).json({ message: "User not found." })
+        const perPage = parseInt(req.query.per_page) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const search = req.query.search || '';
+        const sortField = req.query.sort_field || 'updated_at';
+        const sortDirection = req.query.sort_direction === 'asc' ? 1 : -1;
+
+        const filter = {
+            username: { $regex: search, $options: 'i' }
+        };
+
+        const total = await User.countDocuments(filter);
+        const users = await User.find(filter)
+            .sort({ [sortField]: sortDirection })
+            .skip((page -1) * perPage)
+            .limit(perPage);
+
+        const response = users.map(user => {
+            const userObj = user.toObject();
+            return {
+                ...userObj,
+            };
+        });
+
+        const lastPage = Math.ceil(total / perPage);
+        const from = total === 0 ? 0 : (page -1) * perPage + 1;
+        const to = Math.min(page * perPage, total);
+
+        const links = [];
+        for (let i = 1; i <= lastPage; i++) {
+            links.push({
+                url: `?page=${i}&per_page=${perPage}&search=${search}&sort_field=${sortField}&sort_direction=${req.query.sort_direction || 'desc'}`,
+                label: String(i),
+                active: i === page,
+            });
         }
-        res.status(200).json(users);
-    } catch (error) {
-        res.status(500).json({ error: "Internal Server Error." })
+
+        res.status(200).json({
+            data: response,
+            links,
+            total,
+            limit: perPage,
+            from,
+            to
+        });
+
+    }   catch(error) {
+        console.error("Error fetchong users:", error);
+        res.status(500).json({ error: "Internal Server Error."});
     }
 }
 
